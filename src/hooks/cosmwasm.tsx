@@ -285,7 +285,7 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
         })
       )) as unknown as {data: string};
 
-      const { list } = fromBase64(response.data) as { list : string[]};
+      const { list } = fromBase64(response.data) as { list : never[]};
 
       setDomains(list);
 
