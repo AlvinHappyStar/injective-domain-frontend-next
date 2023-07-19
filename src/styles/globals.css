@@ -3,9 +3,13 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-300;
+  @apply bg-[#102030];
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
 }
 
 .btn {
-  @apply bg-blue-500 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-600 transition-all duration-200;
+  @apply bg-[#a0b0c0] text-white px-6 py-2 rounded-lg text-sm hover:bg-[#a0b0c0] transition-all duration-200;
 }

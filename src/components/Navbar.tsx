@@ -5,9 +5,11 @@ type Props = {};
 
 const Navbar = (props: Props) => {
   return (
-    <div className='bg-gray-100'>
-      <div className='container mx-auto flex justify-between items-center p-2'>
-        <h1>Counter Example</h1>
+    <div className='fixed bg-[#00000080] w-full h-20 z-10'>
+      <div className="h-full flex flex-row items-center justify-between px-4">
+        <div className = "flex h-[50px] sm:px-4">
+          <img alt="" src="./logo192.png"/>
+        </div>
         <ConnectWallet />
       </div>
     </div>

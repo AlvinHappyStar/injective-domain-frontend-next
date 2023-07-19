@@ -22,11 +22,9 @@ let { Provider } = (CosmWasmContext =
     nativeBalanceStr: '',
     nativeBalance: 0,
 
-    executeFlip:(level:number) => {},
-    executeRemoveTreasury:(level:number) => {},
+    executeRegister:(name:string, duration:number, price:number) => {},
 
-    getHistory:() => {},
-    historyList: null,
+    fetchName:(name:string) => {},
 
   }))
 

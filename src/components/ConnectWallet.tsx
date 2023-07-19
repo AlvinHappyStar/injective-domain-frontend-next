@@ -1,4 +1,3 @@
-import { useWalletStore } from "@/context/WalletContextProvider";
 import React,{useState, useEffect} from "react";
 
 import { useSigningClient } from '../context/cosmwasm'

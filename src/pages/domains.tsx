@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { HomeView } from "../views";
+import { DomainView } from "../views";
 type Props = {};
 
 function Home({ }: Props) {
 
   return (
-    <HomeView/>
+    <DomainView/>
   );
 }
 

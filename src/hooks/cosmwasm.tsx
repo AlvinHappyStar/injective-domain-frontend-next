@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { connectKeplr } from '../services/keplr'
 import { SigningCosmWasmClient, CosmWasmClient, JsonObject } from '@cosmjs/cosmwasm-stargate'
 import {
-  convertMicroDenomToDenom, 
+  convertMicroDenomToDenom,
   convertDenomToMicroDenom,
   convertFromMicroDenom
 } from '../util/conversion'
@@ -14,7 +14,8 @@ import {
   toBase64,
 } from "@injectivelabs/sdk-ts";
 
-import {NotificationContainer, NotificationManager} from 'react-notifications'
+import { toast } from "react-toastify";
+import { NotificationContainer, NotificationManager } from 'react-notifications'
 import { coin } from '@cosmjs/launchpad'
 
 
@@ -35,11 +36,9 @@ export interface ISigningCosmWasmClientContext {
   nativeBalanceStr: string,
   nativeBalance: number,
 
-  executeFlip: Function,
-  executeRemoveTreasury: Function,
+  executeRegister: Function,
 
-  getHistory: Function,
-  historyList: any
+  fetchName: Function,
 
 }
 
@@ -47,7 +46,7 @@ export const PUBLIC_CHAIN_RPC_ENDPOINT = process.env.NEXT_PUBLIC_CHAIN_RPC_ENDPO
 export const PUBLIC_CHAIN_REST_ENDPOINT = process.env.NEXT_PUBLIC_CHAIN_REST_ENDPOINT || ''
 export const PUBLIC_CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID || ''
 export const PUBLIC_STAKING_DENOM = process.env.NEXT_PUBLIC_STAKING_DENOM || 'inj'
-export const PUBLIC_COINFLIP_CONTRACT = process.env.NEXT_PUBLIC_COINFLIP_CONTRACT || ''
+export const PUBLIC_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
 
 export const defaultFee = {
   amount: [],
@@ -63,7 +62,7 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  
+
   const [nativeBalanceStr, setNativeBalanceStr] = useState('')
   const [nativeBalance, setNativeBalance] = useState(0)
 
@@ -77,16 +76,16 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   ////////////////////////////////////////////////////////////////////////
 
   const showNotification = false;
-  const notify = (flag:boolean, str:String) => {
+  const notify = (flag: boolean, str: String) => {
     if (!showNotification)
       return;
 
     if (flag)
       NotificationManager.success(str)
-    else 
+    else
       NotificationManager.error(str)
   }
-  const connectWallet = async (inBackground:boolean) => {
+  const connectWallet = async (inBackground: boolean) => {
     if (!inBackground)
       setLoading(true)
 
@@ -119,7 +118,7 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
       setWalletAddress(address)
 
       localStorage.setItem("address", address)
-      
+
       if (!inBackground) {
         setLoading(false)
         notify(true, "Connected Successfully")
@@ -136,7 +135,7 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
     if (signingClient) {
       localStorage.removeItem("address")
       signingClient.disconnect()
-      
+
     }
     setIsAdmin(false)
     setWalletAddress('')
@@ -154,10 +153,9 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   const getBalances = async () => {
     setLoading(true)
     try {
-      const objectNative:JsonObject = await signingClient.getBalance(walletAddress, PUBLIC_STAKING_DENOM)
+      const objectNative: JsonObject = await signingClient.getBalance(walletAddress, PUBLIC_STAKING_DENOM)
       setNativeBalanceStr(`${convertMicroDenomToDenom(objectNative.amount)} ${convertFromMicroDenom(objectNative.denom)}`)
       setNativeBalance(convertMicroDenomToDenom(objectNative.amount))
-      console.log("native", nativeBalance)
       setLoading(false)
       notify(true, `Successfully got balances`)
     } catch (error) {
@@ -167,15 +165,15 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   }
 
   const getConfig = async () => {
-    
+
     setLoading(true)
     try {
-      const response:JsonObject = await signingClient.queryContractSmart(PUBLIC_COINFLIP_CONTRACT, {
+      const response: JsonObject = await signingClient.queryContractSmart(PUBLIC_CONTRACT_ADDRESS, {
         config: {}
       })
       setConfig(response)
       setIsAdmin(response.owner == walletAddress)
-      setLoading(false)   
+      setLoading(false)
       notify(true, `Successfully got config`)
     } catch (error) {
       setLoading(false)
@@ -189,86 +187,53 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
 
-  const executeFlip = async (level:string) => {
+  const executeRegister = async (name: string, duration: number, price: number) => {
     setLoading(true)
-    try {
-        console.log("sdf");
-    //   const result = await signingClient?.execute(
-    //     walletAddress, // sender address
-    //     PUBLIC_COINFLIP_CONTRACT, // token escrow contract
-    //     { 
-    //       "flip":
-    //       {
-    //         "level":level, 
-    //       } 
-    //     },
-    //     defaultFee,
-    //     undefined,
-    //     [coin(parseInt(convertDenomToMicroDenom(level), 10), PUBLIC_STAKING_DENOM)]
-    //   )
+    const isExist = await fetchName(name);
+    if (!isExist) {
+      try {
 
-    const msg = MsgExecuteContractCompat.fromJSON({
-        contractAddress: PUBLIC_COINFLIP_CONTRACT,
-        sender: walletAddress,
-        msg: {
-          increment: {},
-        },
-      });
+        const msg = MsgExecuteContractCompat.fromJSON({
+          contractAddress: PUBLIC_CONTRACT_ADDRESS,
+          sender: walletAddress,
+          msg: {
+            register: {
+              name: name,
+              duration: duration,
+            },
+          },
+          funds: {
+            denom: PUBLIC_STAKING_DENOM,
+            amount: convertDenomToMicroDenom(price),
+          }
+        });
 
-      console.log(msgBroadcastClient);
-      const result = await msgBroadcastClient.broadcast({
-        msgs: msg,
-        injectiveAddress: walletAddress,
-      });
-      setLoading(false)
-      getBalances()
-    //   if (result && result.transactionHash) {
+        const result = await msgBroadcastClient.broadcast({
+          msgs: msg,
+          injectiveAddress: walletAddress,
+        });
 
-    //     const response:JsonObject = await signingClient.getTx(result.transactionHash)
-    //     let log_json = JSON.parse(response.rawLog)
-    //     let wasm_events = log_json[0].events[5].attributes
-        
-    //     // if (wasm_events[4].value == 'true') 
-    //     //   successNotification({ title: `You Win`, txHash: result.transactionHash })
-    //     // else
-    //     //   errorNotification({ title: `You Lose`, txHash: result.transactionHash })
-    //   }
-    } catch (error) {
-      setLoading(false)
-      notify(false, `Flip error : ${error}`)
-      console.log("error", error)
+        setLoading(false)
+        getBalances()
+        if (result && result.txHash) {
+
+          const response: JsonObject = result.rawLog;
+          let log_json = JSON.parse(response)
+          let wasm_events = log_json[0].events[5].attributes
+          console.log(wasm_events[3].value);
+
+          if (wasm_events[3].value === name)
+            toast.success("Register Success:" + result.txHash);
+        }
+
+      } catch (error) {
+        setLoading(false)
+        notify(false, `Flip error : ${error}`)
+        toast.error(error);
+      }
     }
-  }
-
-  const executeRemoveTreasury = async (amount:number) => {
-    setLoading(true)
- 
-    try {
-    
-      const result = await signingClient?.execute(
-        walletAddress, // sender address
-        PUBLIC_COINFLIP_CONTRACT, // token escrow contract
-        { 
-          "remove_treasury":
-          {
-            "amount":`${parseInt(convertDenomToMicroDenom(amount), 10)}`, 
-          } 
-        }, // msg
-        defaultFee,
-        undefined,
-        []
-      )
-      setLoading(false)
-      getConfig()
-      getBalances()
-    //   if (result && result.transactionHash) {
-    //     successNotification({ title: 'Remove Treasury Successful', txHash: result.transactionHash })
-    //   }
-      notify(true, 'Successfully executed')
-    } catch (error) {
-      setLoading(false)
-      notify(false, `RemoveTreasury error : ${error}`)
-    }
+    else
+      toast.warn("Name is Exist");
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -276,22 +241,30 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   ///////////////    Get History            //////////////////////////////
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
-  
-  const getHistory = async () => {
+
+  const fetchName = async (name: string) => {
     setLoading(true)
     try {
-      const response:JsonObject = await signingClient.queryContractSmart(PUBLIC_COINFLIP_CONTRACT, {
-        history: {count: 100}
-      })
-      
-      setHistoryList(response.list)
-      setLoading(false)
+      const response = (await chainGrpcWasmApi.fetchSmartContractState(
+        PUBLIC_CONTRACT_ADDRESS,
+        toBase64({
+          resolve_record: {
+            name: name,
+          }
+        })
+      )) as unknown as {data: string};
 
-      notify(true, 'Successfully got History')
-    } catch (error) {
-      setLoading(false)
-      notify(false, `GetHistory Error : ${error}`)
-      console.log(error)
+      const { address } = fromBase64(response.data) as { address: string };
+
+      console.log("address:", address);
+
+      if (address)
+        return true;
+      else
+        return false;
+      // const { count } = fromBase64(response.data) as { count: number };
+    } catch (e) {
+      toast.error(e);
     }
   }
 
@@ -312,10 +285,8 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
     nativeBalanceStr,
     nativeBalance,
 
-    executeFlip,
-    executeRemoveTreasury,
+    executeRegister,
 
-    getHistory,
-    historyList
+    fetchName,
   }
 }
