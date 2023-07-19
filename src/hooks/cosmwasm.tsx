@@ -39,6 +39,9 @@ export interface ISigningCosmWasmClientContext {
   executeRegister: Function,
 
   fetchName: Function,
+  fetchDomains: Function,
+
+  domains: any,
 
 }
 
@@ -67,7 +70,7 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
   const [nativeBalance, setNativeBalance] = useState(0)
 
   const [config, setConfig] = useState({ owner: '', enabled: true, denom: null, treasury_amount: 0, flip_count: 0 })
-  const [historyList, setHistoryList] = useState([])
+  const [domains, setDomains] = useState([])
 
   ////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////
@@ -258,11 +261,39 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
 
       console.log("address:", address);
 
+      setLoading(false);
+
       if (address)
         return true;
       else
         return false;
-      // const { count } = fromBase64(response.data) as { count: number };
+
+    } catch (e) {
+      toast.error(e);
+    }
+  }
+
+  const fetchDomains = async (addr: string) => {
+    setLoading(true)
+    try {
+      const response = (await chainGrpcWasmApi.fetchSmartContractState(
+        PUBLIC_CONTRACT_ADDRESS,
+        toBase64({
+          resolve_addr: {
+            address: addr,
+          }
+        })
+      )) as unknown as {data: string};
+
+      const { list } = fromBase64(response.data) as { list : string[]};
+
+      setDomains(list);
+
+      console.log("list", list);
+      console.log("domains", domains);
+      setLoading(false);
+
+      
     } catch (e) {
       toast.error(e);
     }
@@ -288,5 +319,8 @@ export const useSigningCosmWasmClient = (): ISigningCosmWasmClientContext => {
     executeRegister,
 
     fetchName,
+    fetchDomains,
+
+    domains,
   }
 }

@@ -25,6 +25,9 @@ let { Provider } = (CosmWasmContext =
     executeRegister:(name:string, duration:number, price:number) => {},
 
     fetchName:(name:string) => {},
+    fetchDomains:(addr:string) => {},
+
+    domains: null,
 
   }))
 
